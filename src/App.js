@@ -1,6 +1,16 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { RefreshCw, Zap, Sliders, DollarSign, CheckCircle, Search, Upload, BarChart3, Users, FileText, TrendingUp, Award, Globe, Download, History, AlertCircle, Clock, Target } from 'lucide-react';
+import { RefreshCw, Zap, Sliders, DollarSign, CheckCircle, Search, Upload, BarChart3, Users, FileText, TrendingUp, Award, Globe, Download, History, AlertCircle, Clock, Target, Shield, Activity, Brain, Network, TrendingDown, FileSpreadsheet } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, RadialBarChart, RadialBar } from 'recharts';
+import { auditLogger } from './utils/AuditLogger';
+import { nlpProcessor } from './utils/NLPProcessor';
+import { buildKnowledgeGraph } from './utils/ProductKnowledgeGraph';
+import { historicalDataAnalyzer, initializeHistoricalData } from './utils/HistoricalDataAnalyzer';
+import { currencyConverter } from './utils/CurrencyConverter';
+import { csvHandler } from './utils/CSVHandler';
+import { enhancedNLP } from './utils/EnhancedNLP';
+import { semanticMatcher } from './utils/SemanticMatcher';
+import { learningMemory } from './utils/LearningMemory';
+import { confidenceEscalation } from './utils/ConfidenceEscalation';
 
 // --- COMPREHENSIVE MOCK DATA FOR FULL AGENTIC WORKFLOW ---
 
@@ -255,23 +265,44 @@ const PRICING_RULES = {
 // --- ENHANCED AGENT SIMULATION LOGIC ---
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
-// 1. Sales Agent - RFP Discovery and Processing
+// 1. Sales Agent - Enhanced with NLP Processing
 const salesAgent = async (rfpData, isFromPDF = false) => {
   await delay(isFromPDF ? 2500 : 1500);
   console.log(`Sales Agent: ${isFromPDF ? 'Processing uploaded RFP' : 'Analyzing RFP requirements'}...`);
   
-  // Enhanced requirement extraction
-  const requirements = parseRFPRequirements(rfpData);
+  // NLP-powered entity extraction
+  console.log('🧠 NLP: Extracting entities from RFP text...');
+  const entities = nlpProcessor.extractEntities(rfpData);
+  console.log('✅ NLP: Entities extracted:', entities);
   
-  // Add urgency and complexity analysis
+  // Detect urgency using NLP
+  const urgencyAnalysis = nlpProcessor.detectUrgency(rfpData);
+  console.log(`⚡ NLP: Urgency detected - ${urgencyAnalysis.level} (${(urgencyAnalysis.score * 100).toFixed(0)}%)`);
+  
+  // Analyze complexity
+  const complexityAnalysis = nlpProcessor.analyzeComplexity(rfpData, entities);
+  console.log(`🔍 NLP: Complexity - ${complexityAnalysis.level} (score: ${complexityAnalysis.score.toFixed(0)})`);
+  
+  // Enhanced requirement extraction with NLP entities
+  const requirements = parseRFPRequirements(rfpData, entities);
+  
+  // Add NLP-enhanced analysis
   const analysis = {
-    urgency: requirements.totalSqFt > 75000 ? 'High' : 'Standard',
-    complexity: requirements.requirements.length > 2 ? 'Complex' : 'Simple',
+    urgency: urgencyAnalysis.level,
+    urgencyScore: urgencyAnalysis.score,
+    complexity: complexityAnalysis.level,
+    complexityScore: complexityAnalysis.score,
     estimatedDuration: Math.ceil(requirements.totalSqFt / 5000) + ' weeks',
-    riskLevel: requirements.deadline ? calculateRiskLevel(requirements.deadline) : 'Medium'
+    riskLevel: requirements.deadline ? calculateRiskLevel(requirements.deadline) : 'Medium',
+    entitiesFound: {
+      quantities: entities.quantities.length,
+      materials: entities.materials.length,
+      certifications: entities.certifications.length,
+      costs: entities.costs.length
+    }
   };
   
-  return { ...requirements, analysis };
+  return { ...requirements, analysis, nlpEntities: entities };
 };
 
 
@@ -911,25 +942,35 @@ const showNotification = (message, type = 'info') => {
   }, 3000);
 };
 
-const parseRFPRequirements = (text) => {
-  console.log('Parsing RFP text:', text.substring(0, 200) + '...');
+const parseRFPRequirements = (text, nlpEntities = null) => {
+  console.log('Parsing RFP text with NLP enhancement...');
   
-  const lines = text.split('\n').map(line => line.trim());
+  // Use NLP entities if available
+  const areas = nlpEntities?.quantities || [];
+  const coverages = nlpEntities?.coverages || [];
+  const costs = nlpEntities?.costs || [];
+  const materials = nlpEntities?.materials || [];
+  const certifications = nlpEntities?.certifications || [];
+  
+  // Fallback to regex if NLP didn't find entities
+  if (areas.length === 0) {
+    const areaMatches = text.match(/(\d+(?:,\d{3})*)\s*(?:sq\s*ft|sqft|square\s*feet)/gi) || [];
+    areas.push(...areaMatches.map(match => parseInt(match.replace(/,/g, '').match(/\d+/)[0])));
+  }
+  
+  if (coverages.length === 0) {
+    const coverageMatches = text.match(/(\d+)\s*(?:sq\s*ft\s*per\s*liter|sqft\/liter)/gi) || [];
+    coverages.push(...coverageMatches.map(match => parseInt(match.match(/\d+/)[0])));
+  }
+  
+  if (costs.length === 0) {
+    const moneyMatches = text.match(/\$\s*(\d+(?:,\d{3})*(?:\.\d{2})?)/g) || [];
+    costs.push(...moneyMatches.map(match => parseFloat(match.replace(/[\$,]/g, ''))));
+  }
+  
   const requirements = [];
   
-  // Extract areas
-  const areaMatches = text.match(/(\d+(?:,\d{3})*)\s*(?:sq\s*ft|sqft|square\s*feet)/gi) || [];
-  const areas = areaMatches.map(match => parseInt(match.replace(/,/g, '').match(/\d+/)[0]));
-
-  // Extract coverage
-  const coverageMatches = text.match(/(\d+)\s*(?:sq\s*ft\s*per\s*liter|sqft\/liter)/gi) || [];
-  const coverages = coverageMatches.map(match => parseInt(match.match(/\d+/)[0]));
-  
-  // Extract costs
-  const moneyMatches = text.match(/\$\s*(\d+(?:,\d{3})*(?:\.\d{2})?)/g) || [];
-  const amounts = moneyMatches.map(match => parseFloat(match.replace(/[\$,]/g, '')));
-  
-  // Create requirements based on patterns
+  // Create requirements based on extracted data
   if (areas.length === 0) {
     areas.push(25000, 20000); // Default areas
   }
@@ -942,7 +983,9 @@ const parseRFPRequirements = (text) => {
         finish: 'Matt', 
         coverage: coverages[0] || 130, 
         minDurability: 10,
-        category: 'Exterior'
+        category: 'Exterior',
+        materials: materials.length > 0 ? materials : ['paint'],
+        certifications: certifications
       }
     },
     { 
@@ -952,26 +995,34 @@ const parseRFPRequirements = (text) => {
         finish: 'Silk', 
         coverage: 110, 
         minDurability: 8, 
-        laborFee: amounts[0] || 3000,
-        category: 'Interior'
+        laborFee: costs[0] || 3000,
+        category: 'Interior',
+        materials: materials.length > 0 ? materials : ['paint'],
+        certifications: certifications
       }
     }
   );
   
-  const deadlineMatch = text.match(/(?:deadline|due|completion).*?(\d{4}-\d{2}-\d{2}|\d{1,2}\/\d{1,2}\/\d{4}|\d{1,2}-\d{1,2}-\d{4})/i);
-  let deadline = '2024-12-15';
+  // Use NLP-extracted deadline if available
+  let deadline = nlpEntities?.deadlines?.[0] || '2024-12-15';
   
-  if (deadlineMatch) {
-    const dateStr = deadlineMatch[1];
-    if (dateStr.includes('/')) {
-      const [month, day, year] = dateStr.split('/');
-      deadline = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-    } else if (dateStr.includes('-') && dateStr.length === 10) {
-      deadline = dateStr;
+  // Fallback to regex
+  if (!nlpEntities?.deadlines?.length) {
+    const deadlineMatch = text.match(/(?:deadline|due|completion).*?(\d{4}-\d{2}-\d{2}|\d{1,2}\/\d{1,2}\/\d{4}|\d{1,2}-\d{1,2}-\d{4})/i);
+    if (deadlineMatch) {
+      const dateStr = deadlineMatch[1];
+      if (dateStr.includes('/')) {
+        const [month, day, year] = dateStr.split('/');
+        deadline = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+      } else if (dateStr.includes('-') && dateStr.length === 10) {
+        deadline = dateStr;
+      }
     }
   }
   
   const totalSqFt = areas.reduce((sum, area) => sum + area, 0) || 50000;
+  
+  console.log(`✅ Parsed ${requirements.length} requirements, total area: ${totalSqFt} sq ft`);
   
   return {
     deadline,
@@ -1005,6 +1056,94 @@ const calculateVendorScore = (price, reliability, leadTime) => {
   return (priceScore * 0.4 + reliabilityScore * 0.4 + timeScore * 0.2);
 };
 
+// Win Probability Calculator - Enhanced with Historical Data
+const calculateWinProbability = (rfpAnalysis) => {
+  const matchScore = rfpAnalysis.overallMatchScore || 75;
+  const avgReliability = rfpAnalysis.pricingDetails?.avgReliability || 90;
+  const competitiveScore = rfpAnalysis.pricingDetails?.score || 75;
+  const vendor = rfpAnalysis.recommendedVendor;
+  const finalPrice = rfpAnalysis.pricingDetails?.finalPrice || 50000;
+  
+  // Get historical prediction
+  console.log('📊 Analyzing historical data for win probability...');
+  const historicalProbability = historicalDataAnalyzer.predictWinProbability(
+    matchScore,
+    finalPrice,
+    vendor
+  );
+  console.log(`📈 Historical win probability: ${historicalProbability.toFixed(1)}%`);
+  
+  // Get vendor performance
+  const vendorPerf = historicalDataAnalyzer.getVendorPerformance(vendor);
+  const vendorWinRate = vendorPerf?.winRate || 72;
+  console.log(`🏆 ${vendor} historical win rate: ${vendorWinRate.toFixed(1)}%`);
+  
+  // Calculate factors
+  const factors = {
+    matchScore: matchScore,
+    pricingCompetitiveness: (avgReliability * 0.4 + competitiveScore * 0.6),
+    deadlineCompliance: 85, // Default good compliance
+    historicalSuccess: historicalProbability
+  };
+  
+  // Weighted formula with historical data
+  const winProbability = (
+    factors.matchScore * 0.35 +
+    factors.pricingCompetitiveness * 0.30 +
+    factors.deadlineCompliance * 0.20 +
+    factors.historicalSuccess * 0.15
+  );
+  
+  const probability = Math.round(winProbability);
+  
+  // Generate recommendation
+  let recommendation;
+  if (probability >= 80) {
+    recommendation = {
+      level: '🟢 HIGH',
+      message: 'Strongly recommend bidding - Excellent win potential',
+      action: 'Proceed with confidence'
+    };
+  } else if (probability >= 60) {
+    recommendation = {
+      level: '🟡 MEDIUM',
+      message: 'Consider bidding with optimizations',
+      action: 'Review pricing and timeline for improvements'
+    };
+  } else if (probability >= 40) {
+    recommendation = {
+      level: '🟠 LOW',
+      message: 'Risky - Requires strategic pricing adjustments',
+      action: 'Significant optimization needed'
+    };
+  } else {
+    recommendation = {
+      level: '🔴 VERY LOW',
+      message: 'Not recommended unless strategic value exists',
+      action: 'Consider passing or major strategy revision'
+    };
+  }
+  
+  // Get price forecast
+  const priceForecast = historicalDataAnalyzer.forecastPrice(
+    rfpAnalysis.totalSqFt || 50000,
+    vendor
+  );
+  
+  return {
+    probability: probability,
+    confidence: probability >= 75 ? 'High' : probability >= 55 ? 'Medium' : 'Low',
+    factors: factors,
+    recommendation: recommendation,
+    riskLevel: probability >= 75 ? 'Low Risk' : probability >= 55 ? 'Medium Risk' : 'High Risk',
+    historicalInsights: {
+      vendorWinRate: vendorWinRate.toFixed(1),
+      historicalProbability: historicalProbability.toFixed(1),
+      priceForecast: priceForecast
+    }
+  };
+};
+
 // --- MAIN APPLICATION COMPONENT ---
 const statusMap = {
   IDLE: { text: "System Ready", icon: Search },
@@ -1027,6 +1166,8 @@ const App = () => {
   const [detectedRfps, setDetectedRfps] = useState(DETECTED_RFPS);
   const [selectedRfp, setSelectedRfp] = useState(null);
   const [scannerResults, setScannerResults] = useState(null);
+  const [selectedCurrency, setSelectedCurrency] = useState('USD');
+  const [knowledgeGraphInitialized, setKnowledgeGraphInitialized] = useState(false);
   const fileInputRef = useRef(null);
   
   // Default RFP text
@@ -1054,6 +1195,21 @@ Requirement B: Interior Walls (25,000 sq ft)
       setRfpText(DEFAULT_RFP);
     }
   }, [rfpText]);
+  
+  // Initialize knowledge graph and historical data
+  useEffect(() => {
+    if (!knowledgeGraphInitialized) {
+      console.log('🧠 Initializing Knowledge Graph...');
+      buildKnowledgeGraph(PRODUCT_REPOSITORY);
+      console.log('✅ Knowledge Graph initialized');
+      
+      console.log('📊 Initializing Historical Data...');
+      initializeHistoricalData();
+      console.log('✅ Historical Data initialized');
+      
+      setKnowledgeGraphInitialized(true);
+    }
+  }, [knowledgeGraphInitialized]);
 
   // Auto-scan simulation (simplified)
   useEffect(() => {
@@ -1110,33 +1266,61 @@ Requirement B: Interior Walls (25,000 sq ft)
     }
   };
 
-  // Main orchestrator function - Enhanced workflow
+  // Main orchestrator function - Enhanced workflow with audit logging and win probability
   const runOrchestrator = useCallback(async (inputRfp = null) => {
     if (status !== 'IDLE' && status !== 'COMPLETE') return;
+    
+    const rfpId = `RFP_${Date.now()}`;
+    
+    // Log workflow start
+    auditLogger.logAgentAction(
+      'System',
+      'Workflow Started',
+      { rfpId, inputType: uploadedFile ? 'PDF Upload' : 'Text Input' },
+      'Initiating multi-agent RFP processing workflow'
+    );
     
     setStatus('SALES_SCANNING');
     setOrchestratorOutput(null);
     
     try {
       // Step 1: Sales Agent Analysis
+      auditLogger.logAgentAction('Sales Agent', 'Processing Started', { rfpId }, 'Analyzing RFP and extracting requirements');
       const salesResult = await salesAgent(inputRfp || rfpText, !!uploadedFile);
+      auditLogger.logAgentAction('Sales Agent', 'Processing Complete', { rfpId, requirementsFound: salesResult.requirements.length }, `Extracted ${salesResult.requirements.length} requirements`);
       setStatus('TECHNICAL_MATCHING');
       
       // Step 2: Technical Agent Spec Matching
+      auditLogger.logAgentAction('Technical Agent', 'Matching Started', { rfpId }, 'Performing specification matching across vendors');
       const technicalResult = await technicalAgent(salesResult);
+      auditLogger.logAgentAction('Technical Agent', 'Matching Complete', { rfpId, matchScore: technicalResult.overallMatchScore }, `Achieved ${technicalResult.overallMatchScore}% match score`);
       setStatus('PRICING_CALCULATING');
       
       // Step 3: Pricing Agent Cost Calculation
+      auditLogger.logAgentAction('Pricing Agent', 'Pricing Started', { rfpId }, 'Calculating comprehensive pricing');
       const pricingResult = await pricingAgent(technicalResult);
-      setStatus('GENERATING_REPORT');
+      auditLogger.logAgentAction('Pricing Agent', 'Pricing Complete', { rfpId, vendor: pricingResult.recommendedVendor, price: pricingResult.pricingDetails.finalPrice }, `Recommended ${pricingResult.recommendedVendor} at $${pricingResult.pricingDetails.finalPrice.toLocaleString()}`);
+      setStatus('ORCHESTRATING');
       
       // Step 4: Main Agent (Orchestrator) - Final compilation
-      setStatus('ORCHESTRATING');
+      auditLogger.logAgentAction('Main Agent', 'Orchestration Started', { rfpId }, 'Compiling final report and calculating win probability');
       const reportResult = await mainAgent(pricingResult);
+      
+      // Calculate Win Probability
+      const winProbability = calculateWinProbability(pricingResult);
+      auditLogger.logAgentAction('Main Agent', 'Win Probability Calculated', { rfpId, probability: winProbability.probability }, `Win probability: ${winProbability.probability}% (${winProbability.recommendation.level})`);
       
       // Final output compilation
       await delay(500);
-      const finalOutput = { ...pricingResult, report: reportResult };
+      const finalOutput = { 
+        ...pricingResult, 
+        report: reportResult,
+        winProbability: winProbability,
+        rfpId: rfpId,
+        auditTrail: auditLogger.getAuditTrail(rfpId)
+      };
+      
+      auditLogger.logAgentAction('Main Agent', 'Orchestration Complete', { rfpId }, 'RFP response generated successfully');
       setOrchestratorOutput(finalOutput);
       setStatus('COMPLETE');
       
@@ -1151,6 +1335,7 @@ Requirement B: Interior Walls (25,000 sq ft)
       
     } catch (error) {
       console.error("Agent Workflow Failed:", error);
+      auditLogger.logAgentAction('System', 'Workflow Failed', { rfpId, error: error.message }, `Error: ${error.message}`);
       setOrchestratorOutput({ error: error.message || "Unknown error during processing." });
       setStatus('ERROR');
     }
@@ -2033,7 +2218,7 @@ const EnhancedResultsPanel = ({ orchestratorOutput }) => {
     );
   }
 
-  const { pricingDetails, recommendedVendor, vendorQuotes, report, overallMatchScore } = orchestratorOutput;
+  const { pricingDetails, recommendedVendor, vendorQuotes, report, overallMatchScore, winProbability } = orchestratorOutput;
   const vendorCount = Object.keys(vendorQuotes).length;
 
   return (
@@ -2042,6 +2227,56 @@ const EnhancedResultsPanel = ({ orchestratorOutput }) => {
         <CheckCircle className="w-6 h-6 text-green-500 mr-3" />
         Comprehensive RFP Response Generated
       </h2>
+
+      {/* Win Probability Banner */}
+      {winProbability && (
+        <div className={`mb-6 p-6 rounded-xl border-2 ${
+          winProbability.probability >= 80 ? 'bg-green-50 border-green-500' :
+          winProbability.probability >= 60 ? 'bg-yellow-50 border-yellow-500' :
+          winProbability.probability >= 40 ? 'bg-orange-50 border-orange-500' :
+          'bg-red-50 border-red-500'
+        }`}>
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="text-2xl font-bold text-gray-800 mb-2">
+                Win Probability: {winProbability.probability}%
+              </h3>
+              <p className="text-lg font-semibold">{winProbability.recommendation.level}</p>
+              <p className="text-gray-700 mt-1">{winProbability.recommendation.message}</p>
+            </div>
+            <div className="text-right">
+              <div className="text-sm text-gray-600 mb-1">Confidence: {winProbability.confidence}</div>
+              <div className="text-sm text-gray-600">Risk: {winProbability.riskLevel}</div>
+              <div className="mt-2 px-4 py-2 bg-white rounded-lg shadow">
+                <Target className="w-8 h-8 mx-auto text-indigo-600" />
+              </div>
+            </div>
+          </div>
+          <div className="grid grid-cols-4 gap-4 mt-4 pt-4 border-t">
+            <div>
+              <div className="text-xs text-gray-600">Match Score</div>
+              <div className="text-lg font-bold">{winProbability.factors.matchScore.toFixed(0)}%</div>
+            </div>
+            <div>
+              <div className="text-xs text-gray-600">Pricing</div>
+              <div className="text-lg font-bold">{winProbability.factors.pricingCompetitiveness.toFixed(0)}%</div>
+            </div>
+            <div>
+              <div className="text-xs text-gray-600">Deadline</div>
+              <div className="text-lg font-bold">{winProbability.factors.deadlineCompliance.toFixed(0)}%</div>
+            </div>
+            <div>
+              <div className="text-xs text-gray-600">Historical</div>
+              <div className="text-lg font-bold">{winProbability.factors.historicalSuccess.toFixed(0)}%</div>
+            </div>
+          </div>
+          <div className="mt-4 p-3 bg-white rounded-lg">
+            <p className="text-sm font-medium text-gray-700">
+              <strong>Recommended Action:</strong> {winProbability.recommendation.action}
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Enhanced Summary Stats */}
       <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-6">
@@ -2074,29 +2309,39 @@ const EnhancedResultsPanel = ({ orchestratorOutput }) => {
       {/* Report Download Section */}
       {report && (
         <div className="border-t pt-6 mb-6">
-          <h3 className="text-lg font-semibold text-gray-700 mb-4">Generated Reports</h3>
-          <div className="flex space-x-4">
+          <h3 className="text-lg font-semibold text-gray-700 mb-4">Generated Reports & Data Export</h3>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <button 
               onClick={() => downloadReport('pdf', report)}
-              className="flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+              className="flex items-center justify-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
             >
               <Download className="w-4 h-4 mr-2" />
-              Download PDF Report
+              PDF Report
             </button>
             <button 
               onClick={() => downloadReport('excel', report)}
-              className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+              className="flex items-center justify-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
             >
               <Download className="w-4 h-4 mr-2" />
-              Download Excel Analysis
+              Excel Analysis
+            </button>
+            <button 
+              onClick={() => csvHandler.exportVendorQuotes(vendorQuotes)}
+              className="flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              <FileSpreadsheet className="w-4 h-4 mr-2" />
+              Export CSV
             </button>
             <button 
               onClick={() => viewExecutiveSummary(report)}
-              className="flex items-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+              className="flex items-center justify-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
             >
               <FileText className="w-4 h-4 mr-2" />
-              View Executive Summary
+              Summary
             </button>
+          </div>
+          <div className="mt-3 text-sm text-gray-600">
+            💡 <strong>New:</strong> Export vendor quotes to CSV for further analysis in Excel/Google Sheets
           </div>
         </div>
       )}

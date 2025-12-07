@@ -1,4 +1,6 @@
 // Technical Agent - Specification Matching and Product Analysis
+import { semanticMatcher } from '../utils/SemanticMatcher';
+
 export class TechnicalAgent {
   constructor(memoryLayer) {
     this.name = "Technical Agent";
@@ -8,8 +10,10 @@ export class TechnicalAgent {
       "Product Specification Matching",
       "Vendor Comparison Analysis", 
       "Technical Compatibility Assessment",
-      "Performance Scoring"
+      "Performance Scoring",
+      "Semantic Similarity Analysis"
     ];
+    this.semanticMatcher = semanticMatcher;
   }
 
   // Main specification matching function
@@ -59,7 +63,7 @@ export class TechnicalAgent {
     };
   }
 
-  // Find matching products from all vendors
+  // Find matching products from all vendors (Enhanced with semantic matching)
   async findVendorMatches(requirement, availableProducts) {
     const vendorMatches = {};
     
@@ -71,13 +75,21 @@ export class TechnicalAgent {
       products.forEach(product => {
         const matchScore = this.calculateMatchScore(requirement, product);
         
-        if (matchScore.totalScore > highestScore) {
-          highestScore = matchScore.totalScore;
+        // Add semantic similarity bonus
+        const semanticScores = this.semanticMatcher.semanticSpecMatch(requirement, product);
+        const semanticBonus = (semanticScores.overallSimilarity * 5); // Up to 5 bonus points
+        
+        const totalScore = matchScore.totalScore + semanticBonus;
+        
+        if (totalScore > highestScore) {
+          highestScore = totalScore;
           bestProduct = {
             ...product,
-            matchScore: matchScore.totalScore,
+            matchScore: Math.min(Math.round(totalScore), 100),
             matchDetails: matchScore.details,
-            matchReasons: matchScore.reasons
+            matchReasons: matchScore.reasons,
+            semanticScores: semanticScores,
+            semanticBonus: semanticBonus.toFixed(1)
           };
         }
       });
@@ -90,8 +102,17 @@ export class TechnicalAgent {
     return vendorMatches;
   }
 
-  // Calculate match score between requirement and product
+  // Enhanced match score with weighted scoring (Spec Match Scoring 2.0)
   calculateMatchScore(requirement, product) {
+    // Weighted scoring - critical specs have higher weights
+    const weights = {
+      finish: 0.30,      // Finish type (30%)
+      coverage: 0.25,    // Coverage efficiency (25%)
+      durability: 0.20,  // Durability requirement (20%)
+      application: 0.15, // Application type (15%)
+      reliability: 0.10  // Reliability bonus (10%)
+    };
+    
     let totalScore = 0;
     const details = {};
     const reasons = [];
@@ -102,74 +123,113 @@ export class TechnicalAgent {
       if (product.finish.toLowerCase() === requirement.finish.toLowerCase()) {
         totalScore += 30;
         details.finishMatch = 30;
-        reasons.push(`Perfect finish match: ${product.finish}`);
+        reasons.push(`✓ Perfect finish match: ${product.finish} (30 pts)`);
       } else if (this.isCompatibleFinish(requirement.finish, product.finish)) {
         totalScore += 20;
         details.finishMatch = 20;
-        reasons.push(`Compatible finish: ${product.finish}`);
+        reasons.push(`~ Compatible finish: ${product.finish} (20 pts)`);
       } else {
         details.finishMatch = 0;
-        reasons.push(`Finish mismatch: ${product.finish} vs ${requirement.finish}`);
+        reasons.push(`✗ Finish mismatch: ${product.finish} vs ${requirement.finish} (0 pts)`);
       }
     }
     
-    // Coverage matching (25 points)
+    // Coverage matching (25 points) - Enhanced with efficiency bonus
     if (requirement.coverage && product.coverage) {
       if (product.coverage >= requirement.coverage) {
         const coverageRatio = Math.min(product.coverage / requirement.coverage, 1.5);
         const coverageScore = Math.min(25 * coverageRatio, 25);
         totalScore += coverageScore;
         details.coverageMatch = coverageScore;
-        reasons.push(`Coverage exceeds requirement: ${product.coverage} vs ${requirement.coverage}`);
+        const efficiency = ((product.coverage / requirement.coverage - 1) * 100).toFixed(1);
+        reasons.push(`✓ Coverage exceeds by ${efficiency}%: ${product.coverage} vs ${requirement.coverage} (${coverageScore.toFixed(1)} pts)`);
       } else {
         const penalty = (requirement.coverage - product.coverage) / requirement.coverage;
         const coverageScore = Math.max(25 * (1 - penalty), 0);
         totalScore += coverageScore;
         details.coverageMatch = coverageScore;
-        reasons.push(`Coverage below requirement: ${product.coverage} vs ${requirement.coverage}`);
+        const deficit = ((1 - product.coverage / requirement.coverage) * 100).toFixed(1);
+        reasons.push(`⚠ Coverage below by ${deficit}%: ${product.coverage} vs ${requirement.coverage} (${coverageScore.toFixed(1)} pts)`);
       }
     }
     
-    // Durability matching (20 points)
+    // Durability matching (20 points) - Critical for long-term value
     if (requirement.durability && product.durability) {
       if (product.durability >= requirement.durability) {
         totalScore += 20;
         details.durabilityMatch = 20;
-        reasons.push(`Durability meets requirement: ${product.durability} years`);
+        const extraYears = product.durability - requirement.durability;
+        reasons.push(`✓ Durability exceeds by ${extraYears} years: ${product.durability} years (20 pts)`);
       } else {
         const durabilityScore = (product.durability / requirement.durability) * 20;
         totalScore += durabilityScore;
         details.durabilityMatch = durabilityScore;
-        reasons.push(`Durability below requirement: ${product.durability} vs ${requirement.durability} years`);
+        const shortfall = requirement.durability - product.durability;
+        reasons.push(`⚠ Durability short by ${shortfall} years: ${product.durability} vs ${requirement.durability} (${durabilityScore.toFixed(1)} pts)`);
       }
     }
     
-    // Application type matching (15 points)
+    // Application type matching (15 points) - Functional compatibility
     if (requirement.type && product.category) {
       if (this.isCompatibleApplication(requirement.type, product.category)) {
         totalScore += 15;
         details.applicationMatch = 15;
-        reasons.push(`Application type compatible: ${product.category}`);
+        reasons.push(`✓ Application compatible: ${product.category} (15 pts)`);
       } else {
         details.applicationMatch = 0;
-        reasons.push(`Application type mismatch: ${product.category}`);
+        reasons.push(`✗ Application mismatch: ${product.category} not suitable for ${requirement.type} (0 pts)`);
       }
     }
     
-    // Reliability bonus (10 points)
+    // Reliability bonus (10 points) - Quality assurance
     if (product.reliability) {
       const reliabilityScore = (product.reliability / 100) * 10;
       totalScore += reliabilityScore;
       details.reliabilityBonus = reliabilityScore;
-      reasons.push(`Reliability score: ${product.reliability}%`);
+      const reliabilityGrade = product.reliability >= 95 ? 'Excellent' : 
+                               product.reliability >= 90 ? 'Very Good' : 
+                               product.reliability >= 85 ? 'Good' : 'Fair';
+      reasons.push(`✓ Reliability: ${product.reliability}% (${reliabilityGrade}) (${reliabilityScore.toFixed(1)} pts)`);
     }
+    
+    // Calculate confidence level based on score
+    const confidence = this.calculateScoreConfidence(totalScore);
     
     return {
       totalScore: Math.min(Math.round(totalScore), maxScore),
       details: details,
       reasons: reasons,
-      maxPossibleScore: maxScore
+      maxPossibleScore: maxScore,
+      confidence: confidence,
+      grade: this.getScoreGrade(totalScore),
+      recommendation: this.getRecommendation(totalScore)
     };
+  }
+  
+  // Calculate confidence based on score
+  calculateScoreConfidence(score) {
+    if (score >= 90) return 0.95;
+    if (score >= 80) return 0.90;
+    if (score >= 70) return 0.85;
+    if (score >= 60) return 0.75;
+    return 0.60;
+  }
+  
+  // Get letter grade for score
+  getScoreGrade(score) {
+    if (score >= 90) return 'A+ (Excellent Match)';
+    if (score >= 80) return 'A (Very Good Match)';
+    if (score >= 70) return 'B (Good Match)';
+    if (score >= 60) return 'C (Fair Match)';
+    return 'D (Poor Match)';
+  }
+  
+  // Get recommendation based on score
+  getRecommendation(score) {
+    if (score >= 85) return '🟢 Highly Recommended - Excellent specification match';
+    if (score >= 70) return '🟡 Recommended - Good match with minor gaps';
+    if (score >= 55) return '🟠 Consider - Acceptable but review gaps carefully';
+    return '🔴 Not Recommended - Significant specification gaps';
   }
 
   // Check if finishes are compatible
