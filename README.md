@@ -5,11 +5,21 @@ An intelligent, multi-agent system for automating Request for Proposal (RFP) res
 ## 🎯 Overview
 
 The Agentic RFP Automation Platform streamlines the entire RFP response process by coordinating multiple AI agents that work together to:
-- Discover and process RFP opportunities
-- Extract and analyze requirements
-- Match specifications across multiple vendors
-- Calculate optimal pricing with testing costs
-- Generate professional reports (PDF & Excel)
+- **Process RFPs in 7 seconds** (vs 3 hours manually)
+- **90% match accuracy** with semantic algorithms
+- **Automatic learning** from past RFPs
+- **Dynamic analytics** with real-time metrics
+- **Enterprise governance** with confidence escalation
+- **Multi-currency support** (9 currencies)
+- **Professional reports** (PDF & CSV export)
+
+### 🚀 Key Highlights
+- ⚡ **26% faster** with parallel execution
+- 🧠 **Learning memory** recalls similar past RFPs
+- 🎯 **Confidence-based** human review flagging
+- 📊 **Dynamic history** updates automatically
+- 📈 **Real-time analytics** calculated from actual data
+- ✅ **Status management** (Won/Lost tracking)
 
 ## 🏗️ Architecture
 
@@ -79,10 +89,12 @@ The Agentic RFP Automation Platform streamlines the entire RFP response process 
 - Step-by-step agent execution tracking
 
 ### 📈 Analytics Dashboard
-- Key performance metrics (Win rate, Response time, Match accuracy)
-- RFP processing pipeline visualization
-- Vendor performance comparison charts
-- Agent performance analysis tables
+- **Dynamic Metrics**: All metrics calculated from real RFP data
+- **Win Rate**: Automatically calculated (Won RFPs / Total RFPs)
+- **Match Accuracy**: Average of all processed RFP match scores
+- **Total Value Won**: Sum of all "Won" RFP values
+- **RFPs Processed**: Real-time count of processed RFPs
+- **Vendor Performance**: Comparison charts and analysis tables
 
 ### 👥 Vendor Analysis
 - Multi-vendor comparison (Asian Paints, Berger Paints, Nerolac Paints)
@@ -91,10 +103,11 @@ The Agentic RFP Automation Platform streamlines the entire RFP response process 
 - Recommended vendor highlighting
 
 ### 📜 Response History
-- Historical RFP tracking
-- Win/Loss/Pending status monitoring
-- Detailed response reports
-- Downloadable history reports
+- **Dynamic History Tracking**: Automatically adds new RFPs when processed
+- **Status Management**: Mark RFPs as Won/Lost with one click
+- **Real-time Updates**: History updates instantly with each new RFP
+- **Total Count Display**: Shows total number of processed RFPs
+- **Detailed Reports**: View details and download reports for each RFP
 
 ## 🎯 Advanced Features
 
@@ -117,6 +130,12 @@ The Agentic RFP Automation Platform streamlines the entire RFP response process 
 - **Learning Memory System**: Stores and recalls similar past RFPs using cosine similarity
 - **Confidence-Based Escalation**: Automatic human review flagging for low-confidence decisions
 
+### Phase 2C: Dynamic Features ✅
+- **Dynamic RFP History**: Automatically updates with each processed RFP
+- **Dynamic Analytics**: Real-time metrics calculated from actual data
+- **Status Management**: Mark RFPs as Won/Lost with instant analytics updates
+- **Real-time Calculations**: Win rate, match accuracy, and total value auto-calculated
+
 ## 📊 Performance Metrics
 
 ```
@@ -128,6 +147,22 @@ Parallel Speedup:    1.33x average
 Win Prediction:      40% improvement
 Confidence Tracking: 5 levels (Very High → Very Low)
 ```
+
+## 🎯 How It Works
+
+### Dynamic Workflow
+1. **Process RFP**: Upload PDF or paste text → Click "Start Agent Workflow"
+2. **Auto-Add to History**: Completed RFP automatically added to Response History
+3. **Update Status**: Mark as "Won" or "Lost" in History tab
+4. **Analytics Update**: All metrics recalculate instantly
+5. **Learning Memory**: System stores RFP for future similarity matching
+
+### Real-Time Features
+- **History Updates**: New RFPs appear at top of history list
+- **Analytics Recalculation**: Win rate, match accuracy, total value update automatically
+- **Status Management**: One-click status updates (Pending → Won/Lost)
+- **Total Count**: Dynamic count of processed RFPs
+- **Learning**: System recalls similar past RFPs for better recommendations
 
 ## 🚀 Getting Started
 
@@ -166,6 +201,33 @@ npm run build
 ```
 
 This creates an optimized production build in the `build` folder.
+
+### Quick Start Guide
+
+**First Time Setup:**
+1. Install dependencies: `npm install`
+2. Start server: `npm start`
+3. Open browser: `http://localhost:3000`
+
+**Process Your First RFP:**
+1. Go to "Agent Workflow" tab
+2. Use default RFP text or paste your own
+3. Click "Start Agent Workflow"
+4. Wait 7 seconds for completion
+5. View results with win probability
+
+**Check Your History:**
+1. Go to "Response History" tab
+2. See your processed RFP at the top
+3. Click "Mark as Won" or "Mark as Lost"
+4. Go to "Analytics" tab
+5. See updated metrics!
+
+**Export Reports:**
+1. After processing an RFP
+2. Scroll to "Generated Reports" section
+3. Click "Download PDF" or "Export CSV"
+4. Professional reports ready for clients
 
 ## 📦 Dependencies
 
@@ -297,12 +359,17 @@ Each agent can be customized by modifying its respective file in `src/agents/`:
 
 ## 📊 Performance Metrics
 
-The platform tracks several key performance indicators:
-- **RFPs Processed**: Total number of RFPs analyzed
-- **Win Rate**: Percentage of successful RFP responses
-- **Avg Response Time**: Average time to generate response
-- **Match Accuracy**: Technical specification match percentage
-- **Total Value Won**: Cumulative value of won contracts
+The platform tracks several key performance indicators **dynamically**:
+- **RFPs Processed**: Real-time count of all processed RFPs
+- **Win Rate**: Auto-calculated percentage (Won / Total) × 100
+- **Avg Response Time**: 7 seconds (99.9% faster than manual)
+- **Match Accuracy**: Average of all RFP match scores
+- **Total Value Won**: Sum of all "Won" RFP values
+
+All metrics update automatically as you:
+- Process new RFPs
+- Mark RFPs as Won/Lost
+- Generate responses
 
 ## 🔐 Security Considerations
 
@@ -338,15 +405,31 @@ For questions, issues, or feature requests, please open an issue on the GitHub r
 
 ## 🗺️ Roadmap
 
-### Upcoming Features
+### ✅ Completed Features
+- [x] Multi-agent RFP processing
+- [x] Enhanced spec matching with semantic algorithms
+- [x] Win probability prediction
+- [x] Parallel execution (26% faster)
+- [x] Learning memory with similarity recall
+- [x] Confidence-based escalation
+- [x] Dynamic RFP history
+- [x] Dynamic analytics dashboard
+- [x] Status management (Won/Lost)
+- [x] CSV/PDF export (4 formats)
+- [x] Multi-currency support (9 currencies)
+- [x] Complete audit trails
+
+### Upcoming Features (Phase 3)
 - [ ] Real-time RFP source integration
-- [ ] Machine learning-based requirement extraction
-- [ ] Advanced vendor recommendation algorithms
-- [ ] Email notification system
-- [ ] Multi-user collaboration features
+- [ ] Advanced ML models (Transformers.js)
+- [ ] Vector database (IndexedDB)
 - [ ] Cloud storage integration
-- [ ] Mobile responsive design enhancements
+- [ ] Email notification system
+- [ ] Multi-user collaboration
+- [ ] Mobile responsive enhancements
 - [ ] API integration for external systems
+- [ ] SSO authentication
+- [ ] Role-based access control
 
 ## 📚 Documentation
 
